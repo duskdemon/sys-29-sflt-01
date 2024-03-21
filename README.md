@@ -56,5 +56,80 @@
 
 ------
 
-`При необходимости прикрепитe сюда скриншоты
-![Название скриншота](ссылка на скриншот)`
+### Решение 2
+
+1. Подняты 2 виртуальные машины на Debian, ip адреса 192.168.122.231 и 192.168.122.232;
+2. Настроен apache на стандартном порту 80, в файле index.html содержится ip-адрес хоста;
+3. Написан скрипт на bash, который проверяет, что порт 80 на машине в состоянии LISTEN, а также, что файл index.html существует,
+если условия не выполняются, выдается код выхода 1. Листинг скрипта:
+```
+#!/bin/bash
+
+p80=$(ss -ltn | grep :80 | awk '{print $1}')
+fe=$(ls /var/www/html/index.html)
+
+p80r=LISTEN
+fer=/var/www/html/index.html
+
+if [ "$p80" = "$p80r" ]; then echo 'port 80 is open';
+else echo 'check failed, port 80 is not open'; exit 1;
+fi
+if [ "$fe" = "$fer" ]; then echo 'file index.html exists';
+else echo 'check failed, file index.html does not exist'; exit 1;
+fi
+```  
+4. Установлен и настроен keepalived, машина с ip 231 сконфигурирована как MASTER, а машина с ip 232 как BACKUP, плавающий ip назначен 192.168.122.233. Настроена проверка работоспособности машины по скрипту apachek.sh каждые 3 секунды. 
+Конфиг машины MASTER: 
+```
+vrrp_script check_apache {
+    script "/home/dusk/apachek.sh"
+    interval 3
+}
+vrrp_instance VI_1 {
+        state MASTER
+        interface enp1s0
+        virtual_router_id 233
+        priority 255
+        advert_int 1
+
+        virtual_ipaddress {
+              192.168.122.233/24
+        }
+     
+        track_script {
+	           check_apache
+		}
+}
+```
+Конфиг машины BACKUP:
+```
+vrrp_script check_apache {
+    script "/home/dusk/apachek.sh"
+    interval 3
+}
+vrrp_instance VI_1 {
+        state BACKUP
+        interface enp1s0
+        virtual_router_id 233
+        priority 200
+        advert_int 1
+
+        virtual_ipaddress {
+              192.168.122.233/24
+        }
+     
+        track_script {
+	           check_apache
+		}
+}
+```
+Вывод команды ip a на машине MASTER:
+![Плавающий ip](https://github.com/duskdemon/sys-29-sflt-01/blob/main/img/sflt-01-keal-ipma.png)
+5. Для проверки, машины работают в штатном режиме, сначала откроем страницу по плавающему адресу http://192.168.122.233:
+![Штатный режим](https://github.com/duskdemon/sys-29-sflt-01/blob/main/img/sflt-01-keal-norm.png)
+6. Переименуем файл index.html на MASTER машине, откроем страницу по плавающему адресу http://192.168.122.233, увидим, что наши настройки отработали успешно и открывается страница с машины BACKUP с адресом 232:
+![переключение на BACKUP](https://github.com/duskdemon/sys-29-sflt-01/blob/main/img/sflt-01-keal-back.png)
+Вывод лога keepalived при переключении:
+![Вывод лога](https://github.com/duskdemon/sys-29-sflt-01/blob/main/img/sflt-01-keal-klog.png)
+7. Вернем файл index.html на место и проверим, как отработает keepalived:
+![Переключение обратно на MASTER](https://github.com/duskdemon/sys-29-sflt-01/blob/main/img/sflt-01-keal-sb2m.png)
