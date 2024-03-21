@@ -124,12 +124,21 @@ vrrp_instance VI_1 {
 }
 ```
 Вывод команды ip a на машине MASTER:
+
 ![Плавающий ip](https://github.com/duskdemon/sys-29-sflt-01/blob/main/img/sflt-01-keal-ipma.png)
+
 5. Для проверки, машины работают в штатном режиме, сначала откроем страницу по плавающему адресу http://192.168.122.233:
+
 ![Штатный режим](https://github.com/duskdemon/sys-29-sflt-01/blob/main/img/sflt-01-keal-norm.png)
+
 6. Переименуем файл index.html на MASTER машине, откроем страницу по плавающему адресу http://192.168.122.233, увидим, что наши настройки отработали успешно и открывается страница с машины BACKUP с адресом 232:
+
 ![переключение на BACKUP](https://github.com/duskdemon/sys-29-sflt-01/blob/main/img/sflt-01-keal-back.png)
+
 Вывод лога keepalived при переключении:
+
 ![Вывод лога](https://github.com/duskdemon/sys-29-sflt-01/blob/main/img/sflt-01-keal-klog.png)
+
 7. Вернем файл index.html на место и проверим, как отработает keepalived:
+
 ![Переключение обратно на MASTER](https://github.com/duskdemon/sys-29-sflt-01/blob/main/img/sflt-01-keal-sb2m.png)
